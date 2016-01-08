@@ -1,21 +1,26 @@
 import os
 import wx
 
-class EditorWindow(wx.Panel):
-    def __init__(self, parent):
-        wx.Panel.__init__(self, parent)
+class EditorWindow(wx.Frame):
+    def __init__(self, **kwargs):
+        wx.Frame.__init__(self, None, **kwargs)
 
-        self.button = wx.Button(self, label="Select a file")
+        self.mainPanel = wx.Panel(self)
+        self.buttonPanel = wx.Panel(self.mainPanel)
+        self.displayPanel = wx.Panel(self.mainPanel, style=wx.BORDER)
+        self.displayPanel.SetScrollbar(wx.VERTICAL, 0, 5, 10)
+
+        self.button = wx.Button(self.buttonPanel, label="Select a file")
         self.Bind(wx.EVT_BUTTON, self.OnOpen, self.button)
 
         img = wx.EmptyImage(500, 500)
-        self.imageDisplay = wx.StaticBitmap(self, wx.ID_ANY, wx.BitmapFromImage(img))
+        self.imageDisplay = wx.StaticBitmap(self.displayPanel, wx.ID_ANY)
 
-        self.mainSizer = wx.BoxSizer(wx.VERTICAL)
-        self.mainSizer.Add(self.button, 0, wx.ALL, 5)
-        self.mainSizer.Add(self.imageDisplay, 0, wx.ALL, 5)
+        self.mainSizer = wx.BoxSizer(wx.HORIZONTAL)
+        self.mainSizer.Add(self.buttonPanel, 0, wx.ALL|wx.EXPAND, 5)
+        self.mainSizer.Add(self.displayPanel, 5, wx.ALL|wx.EXPAND, 5)
 
-        self.SetSizerAndFit(self.mainSizer)
+        self.mainPanel.SetSizerAndFit(self.mainSizer)
 
     def OnOpen(self, e):
         """Opens a file."""
@@ -49,7 +54,6 @@ class EditorWindow(wx.Panel):
         dlg.Destroy()
 
 app = wx.App(False)
-frame = wx.Frame(None, wx.ID_ANY, "PDFEditor", (0,0), (600,600))
-panel = EditorWindow(frame)
+frame = EditorWindow(title="PDFEditor")
 frame.Show()
 app.MainLoop()
