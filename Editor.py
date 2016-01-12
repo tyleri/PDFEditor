@@ -1,6 +1,7 @@
 import os
 import wx
 import fitz
+from time import strftime
 
 class EditorWindow(wx.Frame):
     def __init__(self, **kwargs):
@@ -41,24 +42,29 @@ class EditorWindow(wx.Frame):
             # load PDF file
             self.filename = dlg.GetFilename()
             self.dirname = dlg.GetDirectory()
+            self.tempname = strftime("%Y%m%d%H%M%S")
             absPath = os.path.join(self.dirname, self.filename)
             doc = fitz.Document(absPath)
             #image = wx.Image(imageFile, wx.BITMAP_TYPE_ANY)
 
-            # get first page
-            page = doc.loadPage(0)
-            pixmap = page.getPixmap()
-            pg1AbsPath = os.path.join(self.tempDir,self.filename+"pg1.png")
-            pixmap.writePNG(pg1AbsPath)
-            image = wx.Image(pg1AbsPath, wx.BITMAP_TYPE_ANY)
+            # create images from all pages
+            for i in xrange(doc.pageCount):
+                page = doc.loadPage(i)
+                pixmap = page.getPixmap()
+                absPath = os.path.join(self.tempDir, self.tempname + str(i) + ".png")
+                pixmap.writePNG(absPath)
 
-            # scale image
+            # get first page
+            pg1Path = os.path.join(self.tempDir, self.tempname + "0.png")
+            pg1Image = wx.Image(pg1Path, wx.BITMAP_TYPE_ANY)
+
+            # scale image to fill width of panel
             newWidth = self.displayPanel.GetClientSize().GetWidth()
-            newHeight = image.GetHeight() / (image.GetWidth() / float(newWidth))
-            image = image.Scale(newWidth, newHeight)
+            newHeight = pg1Image.GetHeight() / (pg1Image.GetWidth() / float(newWidth))
+            pg1Image = pg1Image.Scale(newWidth, newHeight)
 
             # Change the displayed image
-            self.imageDisplay.SetBitmap(wx.BitmapFromImage(image))
+            self.imageDisplay.SetBitmap(wx.BitmapFromImage(pg1Image))
             self.Refresh()
         dlg.Destroy()
 
