@@ -16,6 +16,7 @@ class EditorWindow(wx.Frame):
         self.mainPanel = wx.Panel(self)
         self.buttonPanel = wx.Panel(self.mainPanel)
         self.displayPanel = wx.Panel(self.mainPanel, style=wx.SUNKEN_BORDER)
+        self.pageNavPanel = wx.Panel(self.mainPanel)
         #self.displayPanel.SetScrollbar(wx.VERTICAL, 0, 5, 10)
 
         # File selector button
@@ -25,10 +26,23 @@ class EditorWindow(wx.Frame):
         # PDF image
         self.imageDisplay = wx.StaticBitmap(self.displayPanel, wx.ID_ANY)
 
+        # PDF page navigation buttons
+        self.backButton = wx.Button(self.pageNavPanel, label="<")
+        self.nextButton = wx.Button(self.pageNavPanel, label=">")
+        self.pageNavSizer = wx.BoxSizer(wx.HORIZONTAL)
+        self.pageNavSizer.Add(self.backButton, 0, wx.ALL, 5)
+        self.pageNavSizer.Add(self.nextButton, 0, wx.ALL, 5)
+        self.pageNavPanel.SetSizerAndFit(self.pageNavSizer)
+
+        # Place elements in display sizer
+        self.displaySizer = wx.BoxSizer(wx.VERTICAL)
+        self.displaySizer.Add(self.displayPanel, 5, wx.ALL|wx.EXPAND|wx.ALIGN_CENTER_HORIZONTAL, 5)
+        self.displaySizer.Add(self.pageNavPanel, 0, wx.ALIGN_CENTER_HORIZONTAL)
+
         # Place all elements in the main sizer
         self.mainSizer = wx.BoxSizer(wx.HORIZONTAL)
         self.mainSizer.Add(self.buttonPanel, 0, wx.ALL|wx.EXPAND, 5)
-        self.mainSizer.Add(self.displayPanel, 5, wx.ALL|wx.EXPAND, 5)
+        self.mainSizer.Add(self.displaySizer, 5, wx.ALL|wx.EXPAND, 5)
 
         self.mainPanel.SetSizerAndFit(self.mainSizer)
 
