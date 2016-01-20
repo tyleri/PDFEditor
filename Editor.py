@@ -22,6 +22,12 @@ class EditorWindow(wx.Frame):
         # File selector button
         self.button = wx.Button(self.buttonPanel, label="Select a file")
         self.Bind(wx.EVT_BUTTON, self.OnOpen, self.button)
+        # Page rotate left button
+        self.rotateLeftButton = wx.Button(self.buttonPanel, label="Rotate Left")
+        #self.Bind(wx.EVT_BUTTON, self.OnRotateLeft, self.rotateLeftButton)
+        # Page rotate right button
+        self.rotateRightButton = wx.Button(self.buttonPanel, label="Rotate Right")
+        #self.Bind(wx.EVT_BUTTON, self.OnRotateRight, self.rotateRightButton)
 
         # PDF image
         self.imageDisplay = wx.StaticBitmap(self.displayPanel, wx.ID_ANY)
@@ -59,28 +65,28 @@ class EditorWindow(wx.Frame):
             self.tempname = strftime("%Y%m%d%H%M%S")
             absPath = os.path.join(self.dirname, self.filename)
             doc = fitz.Document(absPath)
-            #image = wx.Image(imageFile, wx.BITMAP_TYPE_ANY)
+            self.docImages = [];
 
             # create images from all pages
             for i in xrange(doc.pageCount):
-                page = doc.loadPage(i)
-                pixmap = page.getPixmap()
-                absPath = os.path.join(self.tempDir, self.tempname + str(i) + ".png")
-                pixmap.writePNG(absPath)
+                pgpix = doc.loadPage(i).getPixmap()
+                self.docImages.append(wx.BitmapFromBufferRGBA(
+                    pgpix.width, pgpix.height, pgpix.samples
+                ).ConvertToImage())
 
-            # get first page
-            pg1Path = os.path.join(self.tempDir, self.tempname + "0.png")
-            pg1Image = wx.Image(pg1Path, wx.BITMAP_TYPE_ANY)
-
-            # scale image to fill width of panel
+            # get first page and scale image to fill width of panel
+            pg1 = self.docImages[0]
             newWidth = self.displayPanel.GetClientSize().GetWidth()
-            newHeight = pg1Image.GetHeight() / (pg1Image.GetWidth() / float(newWidth))
-            pg1Image = pg1Image.Scale(newWidth, newHeight)
+            newHeight = pg1.GetHeight() / (pg1.GetWidth() / float(newWidth))
+            pg1 = pg1.Scale(newWidth, newHeight)
 
             # Change the displayed image
-            self.imageDisplay.SetBitmap(wx.BitmapFromImage(pg1Image))
+            self.imageDisplay.SetBitmap(wx.BitmapFromImage(pg1))
             self.Refresh()
         dlg.Destroy()
+
+    #def OnRotateLeft(self, e):
+
 
 app = wx.App(False)
 frame = EditorWindow(title="PDFEditor", size=(500,500))
