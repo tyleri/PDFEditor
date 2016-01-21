@@ -6,6 +6,11 @@ class EditorWindow(wx.Frame):
     def __init__(self, **kwargs):
         wx.Frame.__init__(self, None, **kwargs)
 
+        # Create temp directory if it doesn't exist
+        self.tempDir = os.path.join(os.getcwd(), "temp")
+        if not os.path.exists(self.tempDir):
+            os.mkdir(self.tempDir)
+
         # Panels
         self.mainPanel = wx.Panel(self)
         self.buttonPanel = wx.Panel(self.mainPanel)
@@ -66,18 +71,21 @@ class EditorWindow(wx.Frame):
         dlg = wx.FileDialog(self, "Choose a file", self.dirname, "", filetypes, wx.OPEN)
         if dlg.ShowModal() == wx.ID_OK:
 
-            # load file
+            # copy PDF file to temp file
             self.filename = dlg.GetFilename()
             self.dirname = dlg.GetDirectory()
             self.absPath = os.path.join(self.dirname, self.filename)
+            self.tempAbsPath = os.path.join(self.tempDir, self.filename)
+            copy(self.absPath, self.tempAbsPath)
 
-            doc = fitz.Document(self.absPath)
+            # load temp file
+            doc = fitz.Document(self.tempAbsPath)
             self.numPages = doc.pageCount
             self.docImages = [];
-            self.pdfFile = open(self.absPath, 'r+b')
-            self.pdfReader = PyPDF2.PdfFileReader(self.pdfFile)
+            tempPdfFile = open(self.tempAbsPath, 'rb')
+            self.pdfReader = PyPDF2.PdfFileReader(tempPdfFile)
 
-            # create images from all pages
+            # create images from all pages and get page objects
             for i in xrange(self.numPages):
                 pgpix = doc.loadPage(i).getPixmap()
                 self.docImages.append(wx.BitmapFromBufferRGBA(
@@ -87,14 +95,14 @@ class EditorWindow(wx.Frame):
             # close doc
             doc.close()
 
-            # get first page and scale image to fill width of panel
+            # get first page and display
             self.DisplayPage(0)
             self.currPage = 0;
 
         dlg.Destroy()
 
     def DisplayPage(self, pgIndex):
-        """Displays the given page on the screen."""
+        """Displays the given page on the screen, scaled to fit width of window."""
 
         # get page and scale image to fill width of panel
         pg = self.docImages[pgIndex]
@@ -138,10 +146,13 @@ class EditorWindow(wx.Frame):
 
     def Save(self, e):
         """Saves the PDF file."""
+        pdfOutput = open(self.absPath, 'wb')
         pdfWriter = PyPDF2.PdfFileWriter()
+
         pdfWriter.appendPagesFromReader(self.pdfReader)
 
-        pdfWriter.write(self.pdfFile)
+        pdfWriter.write(pdfOutput)
+        pdfOutput.close()
 
 
 app = wx.App(False)
