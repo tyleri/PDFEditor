@@ -6,11 +6,6 @@ class EditorWindow(wx.Frame):
     def __init__(self, **kwargs):
         wx.Frame.__init__(self, None, **kwargs)
 
-        # Create temp directory if it doesn't exist
-        self.tempDir = os.path.join(os.getcwd(), "temp")
-        if not os.path.exists(self.tempDir):
-            os.mkdir(self.tempDir)
-
         # Panels
         self.mainPanel = wx.Panel(self)
         self.buttonPanel = wx.Panel(self.mainPanel)
@@ -27,12 +22,16 @@ class EditorWindow(wx.Frame):
         # Page rotate right button
         self.rotateRightButton = wx.Button(self.buttonPanel, label="Rotate Right")
         self.Bind(wx.EVT_BUTTON, self.OnRotateRight, self.rotateRightButton)
+        # Save button
+        self.saveButton = wx.Button(self.buttonPanel, label="Save")
+        self.Bind(wx.EVT_BUTTON, self.Save, self.saveButton)
 
         # buttonPanel sizer
         self.buttonPanelSizer = wx.BoxSizer(wx.VERTICAL)
         self.buttonPanelSizer.Add(self.fileSelectButton, 0, wx.ALL|wx.ALIGN_CENTER_HORIZONTAL, 5)
         self.buttonPanelSizer.Add(self.rotateLeftButton, 0, wx.ALL|wx.ALIGN_CENTER_HORIZONTAL, 5)
         self.buttonPanelSizer.Add(self.rotateRightButton, 0, wx.ALL|wx.ALIGN_CENTER_HORIZONTAL, 5)
+        self.buttonPanelSizer.Add(self.saveButton, 0, wx.ALL|wx.ALIGN_CENTER_HORIZONTAL, 5)
         self.buttonPanel.SetSizerAndFit(self.buttonPanelSizer)
 
         # PDF image
@@ -67,19 +66,15 @@ class EditorWindow(wx.Frame):
         dlg = wx.FileDialog(self, "Choose a file", self.dirname, "", filetypes, wx.OPEN)
         if dlg.ShowModal() == wx.ID_OK:
 
-            # copy PDF file to temp file
+            # load file
             self.filename = dlg.GetFilename()
             self.dirname = dlg.GetDirectory()
-            self.tempname = strftime("%Y%m%d%H%M%S")
             self.absPath = os.path.join(self.dirname, self.filename)
-            self.tempAbsPath = os.path.join(self.tempDir, self.tempname)
-            copy(self.absPath, self.tempAbsPath)
 
-            # load temp file
-            doc = fitz.Document(self.tempAbsPath)
+            doc = fitz.Document(self.absPath)
             self.numPages = doc.pageCount
             self.docImages = [];
-            self.pdfFile = open(self.tempAbsPath, 'r+b')
+            self.pdfFile = open(self.absPath, 'r+b')
             self.pdfReader = PyPDF2.PdfFileReader(self.pdfFile)
 
             # create images from all pages
