@@ -1,7 +1,6 @@
-import os
-import wx
-import fitz
+import os, wx, fitz, PyPDF2
 from time import strftime
+from shutil import copy
 
 class EditorWindow(wx.Frame):
     def __init__(self, **kwargs):
@@ -20,14 +19,21 @@ class EditorWindow(wx.Frame):
         #self.displayPanel.SetScrollbar(wx.VERTICAL, 0, 5, 10)
 
         # File selector button
-        self.button = wx.Button(self.buttonPanel, label="Select a file")
-        self.Bind(wx.EVT_BUTTON, self.OnOpen, self.button)
+        self.fileSelectButton = wx.Button(self.buttonPanel, label="Select a file")
+        self.Bind(wx.EVT_BUTTON, self.OnOpen, self.fileSelectButton)
         # Page rotate left button
         self.rotateLeftButton = wx.Button(self.buttonPanel, label="Rotate Left")
-        #self.Bind(wx.EVT_BUTTON, self.OnRotateLeft, self.rotateLeftButton)
+        self.Bind(wx.EVT_BUTTON, self.OnRotateLeft, self.rotateLeftButton)
         # Page rotate right button
         self.rotateRightButton = wx.Button(self.buttonPanel, label="Rotate Right")
-        #self.Bind(wx.EVT_BUTTON, self.OnRotateRight, self.rotateRightButton)
+        self.Bind(wx.EVT_BUTTON, self.OnRotateRight, self.rotateRightButton)
+
+        # buttonPanel sizer
+        self.buttonPanelSizer = wx.BoxSizer(wx.VERTICAL)
+        self.buttonPanelSizer.Add(self.fileSelectButton, 0, wx.ALL|wx.ALIGN_CENTER_HORIZONTAL, 5)
+        self.buttonPanelSizer.Add(self.rotateLeftButton, 0, wx.ALL|wx.ALIGN_CENTER_HORIZONTAL, 5)
+        self.buttonPanelSizer.Add(self.rotateRightButton, 0, wx.ALL|wx.ALIGN_CENTER_HORIZONTAL, 5)
+        self.buttonPanel.SetSizerAndFit(self.buttonPanelSizer)
 
         # PDF image
         self.imageDisplay = wx.StaticBitmap(self.displayPanel, wx.ID_ANY)
@@ -61,14 +67,20 @@ class EditorWindow(wx.Frame):
         dlg = wx.FileDialog(self, "Choose a file", self.dirname, "", filetypes, wx.OPEN)
         if dlg.ShowModal() == wx.ID_OK:
 
-            # load PDF file
+            # copy PDF file to temp file
             self.filename = dlg.GetFilename()
             self.dirname = dlg.GetDirectory()
             self.tempname = strftime("%Y%m%d%H%M%S")
-            absPath = os.path.join(self.dirname, self.filename)
-            doc = fitz.Document(absPath)
+            self.absPath = os.path.join(self.dirname, self.filename)
+            self.tempAbsPath = os.path.join(self.tempDir, self.tempname)
+            copy(self.absPath, self.tempAbsPath)
+
+            # load temp file
+            doc = fitz.Document(self.tempAbsPath)
             self.numPages = doc.pageCount
             self.docImages = [];
+            self.pdfFile = open(self.tempAbsPath, 'r+b')
+            self.pdfReader = PyPDF2.PdfFileReader(self.pdfFile)
 
             # create images from all pages
             for i in xrange(self.numPages):
@@ -77,17 +89,20 @@ class EditorWindow(wx.Frame):
                     pgpix.width, pgpix.height, pgpix.samples
                 ).ConvertToImage())
 
+            # close doc
+            doc.close()
+
             # get first page and scale image to fill width of panel
-            self.DisplayPage(1)
-            self.currPage = 1;
+            self.DisplayPage(0)
+            self.currPage = 0;
 
         dlg.Destroy()
 
-    def DisplayPage(self, pgNum):
-        """Displays the given page on the screen"""
+    def DisplayPage(self, pgIndex):
+        """Displays the given page on the screen."""
 
         # get page and scale image to fill width of panel
-        pg = self.docImages[pgNum-1]
+        pg = self.docImages[pgIndex]
         newWidth = self.displayPanel.GetClientSize().GetWidth()
         newHeight = pg.GetHeight() / (pg.GetWidth() / float(newWidth))
         pg = pg.Scale(newWidth, newHeight)
@@ -97,16 +112,41 @@ class EditorWindow(wx.Frame):
         self.Refresh()
 
     def OnBackButton(self, e):
-        if self.currPage != 1:
+        if self.currPage != 0:
             self.currPage -= 1
             self.DisplayPage(self.currPage)
 
     def OnNextButton(self, e):
-        if self.currPage != self.numPages:
+        if self.currPage != self.numPages-1:
             self.currPage += 1
             self.DisplayPage(self.currPage)
 
-    #def OnRotateLeft(self, e):
+    def OnRotateLeft(self, e):
+        """Rotates the shown page counterclockwise 90 degrees."""
+        # Rotate the image
+        self.docImages[self.currPage] = self.docImages[self.currPage].Rotate90(False)
+
+        # Rotate the PDF page
+        self.pdfReader.getPage(self.currPage).rotateCounterClockwise(90)
+
+        self.DisplayPage(self.currPage)
+
+    def OnRotateRight(self, e):
+        """Rotates the shown page clockwise 90 degrees."""
+        # Rotate the image
+        self.docImages[self.currPage] = self.docImages[self.currPage].Rotate90(True)
+
+        # Rotate the PDF page
+        self.pdfReader.getPage(self.currPage).rotateClockwise(90)
+
+        self.DisplayPage(self.currPage)
+
+    def Save(self, e):
+        """Saves the PDF file."""
+        pdfWriter = PyPDF2.PdfFileWriter()
+        pdfWriter.appendPagesFromReader(self.pdfReader)
+
+        pdfWriter.write(self.pdfFile)
 
 
 app = wx.App(False)
