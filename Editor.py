@@ -34,7 +34,9 @@ class EditorWindow(wx.Frame):
 
         # PDF page navigation buttons
         self.backButton = wx.Button(self.pageNavPanel, label="<")
+        self.Bind(wx.EVT_BUTTON, self.OnBackButton, self.backButton)
         self.nextButton = wx.Button(self.pageNavPanel, label=">")
+        self.Bind(wx.EVT_BUTTON, self.OnNextButton, self.nextButton)
         self.pageNavSizer = wx.BoxSizer(wx.HORIZONTAL)
         self.pageNavSizer.Add(self.backButton, 0, wx.ALL, 5)
         self.pageNavSizer.Add(self.nextButton, 0, wx.ALL, 5)
@@ -65,25 +67,44 @@ class EditorWindow(wx.Frame):
             self.tempname = strftime("%Y%m%d%H%M%S")
             absPath = os.path.join(self.dirname, self.filename)
             doc = fitz.Document(absPath)
+            self.numPages = doc.pageCount
             self.docImages = [];
 
             # create images from all pages
-            for i in xrange(doc.pageCount):
+            for i in xrange(self.numPages):
                 pgpix = doc.loadPage(i).getPixmap()
                 self.docImages.append(wx.BitmapFromBufferRGBA(
                     pgpix.width, pgpix.height, pgpix.samples
                 ).ConvertToImage())
 
             # get first page and scale image to fill width of panel
-            pg1 = self.docImages[0]
-            newWidth = self.displayPanel.GetClientSize().GetWidth()
-            newHeight = pg1.GetHeight() / (pg1.GetWidth() / float(newWidth))
-            pg1 = pg1.Scale(newWidth, newHeight)
+            self.DisplayPage(1)
+            self.currPage = 1;
 
-            # Change the displayed image
-            self.imageDisplay.SetBitmap(wx.BitmapFromImage(pg1))
-            self.Refresh()
         dlg.Destroy()
+
+    def DisplayPage(self, pgNum):
+        """Displays the given page on the screen"""
+
+        # get page and scale image to fill width of panel
+        pg = self.docImages[pgNum-1]
+        newWidth = self.displayPanel.GetClientSize().GetWidth()
+        newHeight = pg.GetHeight() / (pg.GetWidth() / float(newWidth))
+        pg = pg.Scale(newWidth, newHeight)
+
+        # Change the displayed image
+        self.imageDisplay.SetBitmap(wx.BitmapFromImage(pg))
+        self.Refresh()
+
+    def OnBackButton(self, e):
+        if self.currPage != 1:
+            self.currPage -= 1
+            self.DisplayPage(self.currPage)
+
+    def OnNextButton(self, e):
+        if self.currPage != self.numPages:
+            self.currPage += 1
+            self.DisplayPage(self.currPage)
 
     #def OnRotateLeft(self, e):
 
