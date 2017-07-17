@@ -1,5 +1,8 @@
 # PDFEditor
 
+## Notice
+This application is no longer being developed.
+
 ## Setup:
 1. Clone this repository
 
